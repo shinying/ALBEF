@@ -45,7 +45,7 @@ def train(model, data_loader, optimizer, tokenizer, epoch, warmup_steps, device,
         images, targets = images.to(device,non_blocking=True), targets.to(device,non_blocking=True)
 
         # print(text)
-        text_inputs = tokenizer(text, padding=True, return_tensors="pt").to(device)
+        text_inputs = tokenizer(text, padding=True, truncation=True, return_tensors="pt").to(device)
 
         if epoch>0 or not config['warm_up']:
             alpha = config['alpha']
