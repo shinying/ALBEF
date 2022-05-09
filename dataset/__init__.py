@@ -8,6 +8,7 @@ from dataset.nlvr_dataset import nlvr_dataset
 from dataset.ve_dataset import ve_dataset
 from dataset.vqa_dataset import vqa_dataset
 from dataset.vlep_dataset import vlep_dataset # mine
+from dataset.nextqa_dataset import nextqa_dataset
 from dataset.grounding_dataset import grounding_dataset
 
 from dataset.randaugment import RandomAugment
@@ -83,6 +84,12 @@ def create_dataset(dataset, config):
         val_dataset = vlep_dataset(config['root'], 'dev', test_transform)
         return train_dataset, val_dataset
 
+    elif dataset == 'nextqa':
+        train_dataset = nextqa_dataset(config['root'], 'train', config['nframe'], train_transform)
+        val_dataset = nextqa_dataset(config['root'], 'val', config['nframe'],test_transform)
+        test_dataset = nextqa_dataset(config['root'], 'test', config['nframe'],test_transform)
+        return train_dataset, val_dataset, test_dataset
+
 
 def vqa_collate_fn(batch):
     image_list, question_list, answer_list, weight_list, n = [], [], [], [], []
@@ -102,6 +109,15 @@ def vlep_collate_fn(batch):
     texts = [event for data in batch for event in data[1]]
     answers = torch.tensor([data[2] for data in batch], dtype=torch.long)
     return frames, texts, answers
+
+
+def nextqa_collate_fn(batch):
+    frames = torch.stack([d for data in batch for d in data[0]])
+    questions = [data[1] for data in batch]
+    choices = [choice for data in batch for choice in data[2]]
+    labels = torch.tensor([data[3] for data in batch], dtype=torch.long)
+    nframe = [data[4] for data in batch]
+    return frames, questions, choices, labels, nframe
 
 
 def create_sampler(datasets, shuffles, num_tasks, global_rank):
