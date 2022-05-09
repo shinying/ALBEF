@@ -1,12 +1,13 @@
 root: '/data/vlep'
 
 image_res: 384
-batch_size_train: 8
-batch_size_test: 64 
+batch_size_train: 4
+batch_size_test: 32 
 
 alpha: 0.4
-distill: True
+distill: False
 warm_up: False
+grad_accum: 4
 
 bert_config: 'configs/config_bert.json'
 

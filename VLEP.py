@@ -37,14 +37,13 @@ def train(model, data_loader, optimizer, tokenizer, epoch, warmup_steps, device,
 
     header = 'Train Epoch: [{}]'.format(epoch)
     print_freq = 50
-    step_size = 100
+    step_size = 100 * config['grad_accum']
     warmup_iterations = warmup_steps*step_size
 
     for i,(images, text, targets) in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
 
         images, targets = images.to(device,non_blocking=True), targets.to(device,non_blocking=True)
 
-        # print(text)
         text_inputs = tokenizer(text, padding=True, truncation=True, return_tensors="pt").to(device)
 
         if epoch>0 or not config['warm_up']:
@@ -52,17 +51,19 @@ def train(model, data_loader, optimizer, tokenizer, epoch, warmup_steps, device,
         else:
             alpha = config['alpha']*min(1,i/len(data_loader))
 
-        loss = model(images, text_inputs, targets=targets, train=True, alpha=alpha)
+        loss = model(images, text_inputs, targets=targets, train=True, alpha=alpha) / config['grad_accum']
 
-        optimizer.zero_grad()
         loss.backward()
-        optimizer.step()
+        if i % config['grad_accum'] == 0:
+            optimizer.step()
+            optimizer.zero_grad()
 
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
-        metric_logger.update(loss=loss.item())
+        metric_logger.update(loss=loss.item()*config['grad_accum'])
 
-        if epoch==0 and i%step_size==0 and i<=warmup_iterations:
-            scheduler.step(i//step_size)
+        if i % config['grad_accum'] == 0:
+            if epoch==0 and i%step_size==0 and i<=warmup_iterations:
+                scheduler.step(i//step_size)
 
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
